@@ -5,9 +5,10 @@
 # define queries, retrieve specific sets of attributes from the results,
 # and write query results to a csv.
 # @author Spencer Little (mrlittle@uw.edu)
-# Last update: 10/20/2020 -- Initial commit 
+# Last update: 10/20/2020 -- Initial commit
 
 from enum import Enum
+from math import ceil
 from os import environ, path
 from time import sleep, time
 
@@ -16,6 +17,7 @@ import shodan
 RATE_LIMIT = 1  # Shodan limits queries to 1 per second
 
 LIST_DELIMITER = ','
+TMP_DELIMITER = '||+||'
 QUOTE_REPL = '|'
 NULL = 'None'
 
@@ -70,7 +72,7 @@ def execute_queries(
             break
         elif status == Query.QUERY_FAILED:
             print(f'Query failed after {query_count} intermediate queries...')
-            break
+            continue
 
     print(f'Retrieved {len(all_results) - 1} results from all queries.\n')
     print(f'Utilized {total_queries} query tokens.')
@@ -78,21 +80,21 @@ def execute_queries(
     return all_results
 
 
-def write_results_to_csv(result_dict, filename):
+def write_results_to_csv(all_results, filename):
     """Writes a list of query results (dictionaries) to csv file. Attributes in the
     dictionaries must be flattened.
 
     Args:
-        result_dict (list): a list of dictionaries where each dictionary represents an
+        all_results (list): a list of dictionaries where each dictionary represents an
             entity in a response. Attribute names (keys) must be flattened and values may
             only be string or list. See the value returned by execute_queries() for details.
         filename (str): the fully qualified URL to write the results to
     """
-    print(f'Writing results to {filename}...')
+    print(f'Writing {len(all_results)} results to {filename}...')
 
     with open(filename, 'w+') as data_file:
         all_keys = set()  # results may have different number of attributes
-        for dict in result_dict:
+        for dict in all_results:
             for key in dict:
                 all_keys.add(key)
         all_keys = list(all_keys)
@@ -103,13 +105,13 @@ def write_results_to_csv(result_dict, filename):
             all_keys[0] = all_keys[ip_ind]
             all_keys[ip_ind] = tmp
 
-        if len(result_dict) > 0:
+        if len(all_results) > 0:
             data_file.write(', '.join([x for x in all_keys]) + '\n')
 
-        for dict in result_dict:
+        for dict in all_results:
             data_file.write(result_dict_to_str(dict, all_keys))
 
-    print(f'Successfuly wrote {len(result_dict) - 1} results to {filename}.')
+    print(f'Successfuly wrote {len(all_results) - 1} results to {filename}.')
 
 
 def result_dict_to_str(res_dict, all_attr):
@@ -192,12 +194,16 @@ def query_shodan(
     if page_num != 1 and (page_num * 100) - result_count >= 100:
         return [], Query.QUERY_SUCCESS, query_count
     try:
-            results = shodan_api.search('Hacked by')#SHODAN_API.search(query, page=page_num)
+            results = shodan_api.search(query, page=page_num)
             results_extracted = []
             result_total = results['total'] if result_count == None else result_count
 
             if page_num == 1:
-                print(f'Processing {result_total} responses for query: {query}...')
+                print(f'{result_total} total responses for query: {query}.')
+                print(f'Will consume {ceil(result_total/100)} query tokens.')
+            else:
+                print(f'Retrieved page {page_num} of {ceil(result_total/100)}...')
+
 
             matches = results['matches']
             if unique_ips:
@@ -258,17 +264,26 @@ def retrieve_attributes(attribute, response, extracted_res):
     repsonse dictionary and flattens the attribute name using dot notation. If
     the attribute is None the NULL value is substituted for None.
 
+    Note:
+        Some attributes may contains '.' in their name (filenames under http.component
+        for instance) so TMP_DELIMITER is used while flattening to prevent issues with
+        extracting local_attr.
+
     Args:
         attribute (str): the attribute name
         response (dict): the dictionary response from Shodan's API
         extract_res (dict): the dictionary that will hold the extracted attributes
 
     """
-    local_attr = attribute.split('.')[-1]
+    local_attr = attribute.split(TMP_DELIMITER)[-1]
     if isinstance(response[local_attr], dict):
         for n_attribute in response[local_attr]:
-            retrieve_attributes(attribute + '.' + n_attribute, response[local_attr], extracted_res)
-    elif response[attribute.split('.')[-1]] == None:
-        extracted_res[attribute] = NULL
+            retrieve_attributes(
+                attribute + TMP_DELIMITER + n_attribute,
+                response[local_attr],
+                extracted_res
+            )
+    elif response[attribute.split(TMP_DELIMITER)[-1]] == None:
+        extracted_res[attribute.replace(TMP_DELIMITER, '.')] = NULL
     else:
-        extracted_res[attribute] = response[local_attr]
+        extracted_res[attribute.replace(TMP_DELIMITER, '.')] = response[local_attr]
