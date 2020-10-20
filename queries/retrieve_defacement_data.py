@@ -8,7 +8,7 @@
 
 from os import environ
 
-from shodanutils import execute_queries, write_results_to_csv
+from shodan.query_utils import execute_queries, write_results_to_csv
 
 DEFACEMENT_FULL_URL = 'defaced_web_servers_full.csv'
 DEFACEMENT_REDUCED_URL = 'defaced_web_servers_reduced.csv'

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# @file shodanutils.py
+# @file queryutils.py
 # @brief Provides a set of functions for interacting with the Shodan API
 # @details Wraps the official Shodan python API and enables clients to
 # define queries, retrieve specific sets of attributes from the results,
