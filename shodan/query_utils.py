@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# @file shodan/queryutils.py
+# @file /shodan/queryutils.py
 # @brief Provides a set of functions for interacting with the Shodan API
 # @details Wraps the official Shodan python API and enables clients to
 # define queries, retrieve specific sets of attributes from the results,
@@ -37,7 +37,8 @@ def execute_queries(
 ):
     """Executes the provided list of queries, extracts the attributes of interest for each
     entity in the response and returns a list of dictionaries where each dictionary represents
-    an entity in the response and contains a mapping from the attribute's of interest to Shodan's response for that value, or 'None' if no value was returned from Shodan. Nested attributes are
+    an entity in the response and contains a mapping from the attribute's of interest to Shodan's
+    response for that value, or 'None' if no value was returned from Shodan. Nested attributes are
     flattened, see extracted_attributes() for more details.
 
     Args:
@@ -157,7 +158,9 @@ def query_shodan(
         observed_ips=set(),
 ):
     """Queries the Shodan endpoint with the specified query and returns all results as a list of
-    dictionaries where each dictionary an entity in the response and contains a mapping from the attribute's of interest to Shodan's response for that value, or 'None' if no value was returned from Shodan. Nested attributes are flattened, see extracted_attributes() for more details.
+    dictionaries where each dictionary an entity in the response and contains a mapping from the
+    attribute's of interest to Shodan's response for that value, or 'None' if no value was returned
+    from Shodan. Nested attributes are flattened, see extracted_attributes() for more details.
 
     Shodan returns 100 results per request (or 'page'), so this method recursively queries the
     endpoint until all results have been retreived or the query_limit has been reached.
